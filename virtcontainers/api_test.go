@@ -16,6 +16,7 @@ import (
 
 	ktu "github.com/kata-containers/runtime/pkg/katatestutils"
 	"github.com/kata-containers/runtime/virtcontainers/pkg/annotations"
+	"github.com/kata-containers/runtime/virtcontainers/hypervisor"
 	"github.com/kata-containers/runtime/virtcontainers/pkg/mock"
 	vcTypes "github.com/kata-containers/runtime/virtcontainers/pkg/types"
 	"github.com/kata-containers/runtime/virtcontainers/store"
@@ -68,7 +69,7 @@ func newTestSandboxConfigNoop() SandboxConfig {
 	}
 
 	// Sets the hypervisor configuration.
-	hypervisorConfig := HypervisorConfig{
+	hypervisorConfig := hypervisor.Config{
 		KernelPath:     filepath.Join(testDir, testKernel),
 		ImagePath:      filepath.Join(testDir, testImage),
 		HypervisorPath: filepath.Join(testDir, testHypervisor),
@@ -76,7 +77,7 @@ func newTestSandboxConfigNoop() SandboxConfig {
 
 	sandboxConfig := SandboxConfig{
 		ID:               testSandboxID,
-		HypervisorType:   MockHypervisor,
+		HypervisorType:   hypervisor.Mock,
 		HypervisorConfig: hypervisorConfig,
 
 		AgentType: NoopAgentType,
@@ -93,7 +94,7 @@ func newTestSandboxConfigNoop() SandboxConfig {
 
 func newTestSandboxConfigKataAgent() SandboxConfig {
 	// Sets the hypervisor configuration.
-	hypervisorConfig := HypervisorConfig{
+	hypervisorConfig := hypervisor.Config{
 		KernelPath:     filepath.Join(testDir, testKernel),
 		ImagePath:      filepath.Join(testDir, testImage),
 		HypervisorPath: filepath.Join(testDir, testHypervisor),
@@ -101,7 +102,7 @@ func newTestSandboxConfigKataAgent() SandboxConfig {
 
 	sandboxConfig := SandboxConfig{
 		ID:               testSandboxID,
-		HypervisorType:   MockHypervisor,
+		HypervisorType:   hypervisor.Mock,
 		HypervisorConfig: hypervisorConfig,
 
 		AgentType: KataContainersAgent,
@@ -546,16 +547,15 @@ func TestStatusSandboxSuccessfulStateReady(t *testing.T) {
 	cgroupPath, err := renameCgroupPath(utils.DefaultCgroupPath)
 	assert.NoError(err)
 
-	hypervisorConfig := HypervisorConfig{
+	hypervisorConfig := hypervisor.Config{
 		KernelPath:        filepath.Join(testDir, testKernel),
 		ImagePath:         filepath.Join(testDir, testImage),
 		HypervisorPath:    filepath.Join(testDir, testHypervisor),
-		NumVCPUs:          defaultVCPUs,
-		MemorySize:        defaultMemSzMiB,
-		DefaultBridges:    defaultBridges,
-		BlockDeviceDriver: defaultBlockDriver,
-		DefaultMaxVCPUs:   defaultMaxQemuVCPUs,
-		Msize9p:           defaultMsize9p,
+		NumVCPUs:          hypervisor.DefaultVCPUs,
+		MemorySize:        hypervisor.DefaultMemSzMiB,
+		DefaultBridges:    hypervisor.DefaultBridges,
+		BlockDeviceDriver: hypervisor.DefaultBlockDriver,
+		Msize9p:           hypervisor.DefaultMsize9p,
 	}
 
 	expectedStatus := SandboxStatus{
@@ -563,7 +563,7 @@ func TestStatusSandboxSuccessfulStateReady(t *testing.T) {
 		State: types.SandboxState{
 			State: types.StateReady,
 		},
-		Hypervisor:       MockHypervisor,
+		Hypervisor:       hypervisor.Mock,
 		HypervisorConfig: hypervisorConfig,
 		Agent:            NoopAgentType,
 		Annotations:      sandboxAnnotations,
@@ -604,16 +604,15 @@ func TestStatusSandboxSuccessfulStateRunning(t *testing.T) {
 	cgroupPath, err := renameCgroupPath(utils.DefaultCgroupPath)
 	assert.NoError(err)
 
-	hypervisorConfig := HypervisorConfig{
+	hypervisorConfig := hypervisor.Config{
 		KernelPath:        filepath.Join(testDir, testKernel),
 		ImagePath:         filepath.Join(testDir, testImage),
 		HypervisorPath:    filepath.Join(testDir, testHypervisor),
-		NumVCPUs:          defaultVCPUs,
-		MemorySize:        defaultMemSzMiB,
-		DefaultBridges:    defaultBridges,
-		BlockDeviceDriver: defaultBlockDriver,
-		DefaultMaxVCPUs:   defaultMaxQemuVCPUs,
-		Msize9p:           defaultMsize9p,
+		NumVCPUs:          hypervisor.DefaultVCPUs,
+		MemorySize:        hypervisor.DefaultMemSzMiB,
+		DefaultBridges:    hypervisor.DefaultBridges,
+		BlockDeviceDriver: hypervisor.DefaultBlockDriver,
+		Msize9p:           hypervisor.DefaultMsize9p,
 	}
 
 	expectedStatus := SandboxStatus{
@@ -621,7 +620,7 @@ func TestStatusSandboxSuccessfulStateRunning(t *testing.T) {
 		State: types.SandboxState{
 			State: types.StateRunning,
 		},
-		Hypervisor:       MockHypervisor,
+		Hypervisor:       hypervisor.Mock,
 		HypervisorConfig: hypervisorConfig,
 		Agent:            NoopAgentType,
 		Annotations:      sandboxAnnotations,
@@ -1415,14 +1414,14 @@ func TestProcessListContainer(t *testing.T) {
  * Benchmarks
  */
 
-func createNewSandboxConfig(hType HypervisorType, aType AgentType, aConfig interface{}) SandboxConfig {
-	hypervisorConfig := HypervisorConfig{
+func createNewSandboxConfig(hType hypervisor.Type, aType AgentType, aConfig interface{}) SandboxConfig {
+	hypervisorConfig := hypervisor.Config{
 		KernelPath:     "/usr/share/kata-containers/vmlinux.container",
 		ImagePath:      "/usr/share/kata-containers/kata-containers.img",
 		HypervisorPath: "/usr/bin/qemu-system-x86_64",
 	}
 
-	netConfig := NetworkConfig{}
+	netConfig := types.NetworkConfig{}
 
 	return SandboxConfig{
 		ID:               testSandboxID,
@@ -1487,14 +1486,14 @@ func createStartStopDeleteSandbox(b *testing.B, sandboxConfig SandboxConfig) {
 
 func BenchmarkCreateStartStopDeleteSandboxQemuHypervisorNoopAgentNetworkNoop(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		sandboxConfig := createNewSandboxConfig(QemuHypervisor, NoopAgentType, nil)
+		sandboxConfig := createNewSandboxConfig(hypervisor.Qemu, NoopAgentType, nil)
 		createStartStopDeleteSandbox(b, sandboxConfig)
 	}
 }
 
-func BenchmarkCreateStartStopDeleteSandboxMockHypervisorNoopAgentNetworkNoop(b *testing.B) {
+func BenchmarkCreateStartStopDeleteSandboxHypervisorMockNoopAgentNetworkNoop(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		sandboxConfig := createNewSandboxConfig(MockHypervisor, NoopAgentType, nil)
+		sandboxConfig := createNewSandboxConfig(hypervisor.Mock, NoopAgentType, nil)
 		createStartStopDeleteSandbox(b, sandboxConfig)
 	}
 }
@@ -1681,7 +1680,7 @@ func TestNetworkOperation(t *testing.T) {
 	defer deleteNetNS(netNSPath)
 
 	config := newTestSandboxConfigNoop()
-	config.NetworkConfig = NetworkConfig{
+	config.NetworkConfig = types.NetworkConfig{
 		NetNSPath: netNSPath,
 	}
 

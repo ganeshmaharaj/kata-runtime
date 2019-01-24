@@ -30,6 +30,7 @@ import (
 	"github.com/kata-containers/runtime/virtcontainers/device/config"
 	"github.com/kata-containers/runtime/virtcontainers/device/drivers"
 	"github.com/kata-containers/runtime/virtcontainers/device/manager"
+	"github.com/kata-containers/runtime/virtcontainers/hypervisor"
 	vcAnnotations "github.com/kata-containers/runtime/virtcontainers/pkg/annotations"
 	"github.com/kata-containers/runtime/virtcontainers/pkg/mock"
 	vcTypes "github.com/kata-containers/runtime/virtcontainers/pkg/types"
@@ -425,7 +426,7 @@ func TestAppendDevices(t *testing.T) {
 	}
 
 	sandboxConfig := &SandboxConfig{
-		HypervisorConfig: HypervisorConfig{
+		HypervisorConfig: hypervisor.Config{
 			BlockDeviceDriver: config.VirtioBlock,
 		},
 	}
@@ -646,7 +647,7 @@ func TestAgentPathAPI(t *testing.T) {
 	c.UseVSock = true
 	err = k2.generateVMSocket(id, c)
 	assert.Nil(err)
-	_, ok = k2.vmSocket.(kataVSOCK)
+	_, ok = k2.vmSocket.(types.VSOCK)
 	assert.True(ok)
 }
 
@@ -657,7 +658,7 @@ func TestAgentConfigure(t *testing.T) {
 	assert.Nil(err)
 
 	k := &kataAgent{}
-	h := &mockHypervisor{}
+	h := hypervisor.NewMock()
 	c := KataAgentConfig{}
 	id := "foobar"
 
@@ -724,13 +725,13 @@ func TestAgentCreateContainer(t *testing.T) {
 		id:  "foobar",
 		config: &SandboxConfig{
 			ID:             "foobar",
-			HypervisorType: MockHypervisor,
-			HypervisorConfig: HypervisorConfig{
+			HypervisorType: hypervisor.Mock,
+			HypervisorConfig: hypervisor.Config{
 				KernelPath: "foo",
 				ImagePath:  "bar",
 			},
 		},
-		hypervisor: &mockHypervisor{},
+		hypervisor: hypervisor.NewMock(),
 	}
 
 	vcStore, err := store.NewVCSandboxStore(sandbox.ctx, sandbox.id)
@@ -781,7 +782,7 @@ func TestAgentCreateContainer(t *testing.T) {
 	dir, err := ioutil.TempDir("", "kata-agent-test")
 	assert.Nil(err)
 
-	err = k.configure(&mockHypervisor{}, sandbox.id, dir, true, KataAgentConfig{})
+	err = k.configure(hypervisor.NewMock(), sandbox.id, dir, true, KataAgentConfig{})
 	assert.Nil(err)
 
 	// We'll fail on container metadata file creation, but it helps increasing coverage...

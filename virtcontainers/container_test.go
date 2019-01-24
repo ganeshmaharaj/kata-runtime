@@ -21,6 +21,7 @@ import (
 	"github.com/kata-containers/runtime/virtcontainers/device/drivers"
 	"github.com/kata-containers/runtime/virtcontainers/device/manager"
 	"github.com/kata-containers/runtime/virtcontainers/persist"
+	"github.com/kata-containers/runtime/virtcontainers/hypervisor"
 	"github.com/kata-containers/runtime/virtcontainers/store"
 	"github.com/kata-containers/runtime/virtcontainers/types"
 	"github.com/stretchr/testify/assert"
@@ -109,7 +110,7 @@ func TestContainerRemoveDrive(t *testing.T) {
 	// test should pass without a hypervisor created for the container's sandbox.
 	assert.Nil(t, err, "remove drive should succeed")
 
-	sandbox.hypervisor = &mockHypervisor{}
+	sandbox.hypervisor = hypervisor.NewMock()
 	path := "/dev/hda"
 	deviceInfo := config.DeviceInfo{
 		HostPath:      path,
@@ -201,10 +202,10 @@ func TestContainerAddDriveDir(t *testing.T) {
 		ctx:        context.Background(),
 		id:         testSandboxID,
 		devManager: manager.NewDeviceManager(manager.VirtioSCSI, nil),
-		hypervisor: &mockHypervisor{},
+		hypervisor: hypervisor.NewMock(),
 		agent:      &noopAgent{},
 		config: &SandboxConfig{
-			HypervisorConfig: HypervisorConfig{
+			HypervisorConfig: hypervisor.Config{
 				DisableBlockDeviceUse: false,
 			},
 		},

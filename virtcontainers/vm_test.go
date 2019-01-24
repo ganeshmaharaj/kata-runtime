@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/kata-containers/runtime/virtcontainers/utils"
+	"github.com/kata-containers/runtime/virtcontainers/hypervisor"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,11 +20,11 @@ func TestNewVM(t *testing.T) {
 
 	testDir, _ := ioutil.TempDir("", "vmfactory-tmp-")
 	config := VMConfig{
-		HypervisorType: MockHypervisor,
+		HypervisorType: hypervisor.Mock,
 		AgentType:      NoopAgentType,
 		ProxyType:      NoopProxyType,
 	}
-	hyperConfig := HypervisorConfig{
+	hyperConfig := hypervisor.Config{
 		KernelPath: testDir,
 		ImagePath:  testDir,
 	}
@@ -83,7 +84,7 @@ func TestVMConfigValid(t *testing.T) {
 	assert.Error(err)
 
 	testDir, _ := ioutil.TempDir("", "vmfactory-tmp-")
-	config.HypervisorConfig = HypervisorConfig{
+	config.HypervisorConfig = hypervisor.Config{
 		KernelPath: testDir,
 		InitrdPath: testDir,
 	}
@@ -95,11 +96,11 @@ func TestSetupProxy(t *testing.T) {
 	assert := assert.New(t)
 
 	config := VMConfig{
-		HypervisorType: MockHypervisor,
+		HypervisorType: hypervisor.Mock,
 		AgentType:      NoopAgentType,
 	}
 
-	hypervisor := &mockHypervisor{}
+	hypervisor := hypervisor.NewMock()
 	agent := &noopAgent{}
 
 	// wrong proxy type

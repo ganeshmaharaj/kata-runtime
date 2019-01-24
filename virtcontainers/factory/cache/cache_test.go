@@ -14,18 +14,19 @@ import (
 
 	vc "github.com/kata-containers/runtime/virtcontainers"
 	"github.com/kata-containers/runtime/virtcontainers/factory/direct"
+	"github.com/kata-containers/runtime/virtcontainers/hypervisor"
 )
 
 func TestTemplateFactory(t *testing.T) {
 	assert := assert.New(t)
 
 	testDir, _ := ioutil.TempDir("", "vmfactory-tmp-")
-	hyperConfig := vc.HypervisorConfig{
+	hyperConfig := hypervisor.Config{
 		KernelPath: testDir,
 		ImagePath:  testDir,
 	}
 	vmConfig := vc.VMConfig{
-		HypervisorType:   vc.MockHypervisor,
+		HypervisorType:   hypervisor.Mock,
 		AgentType:        vc.NoopAgentType,
 		ProxyType:        vc.NoopProxyType,
 		HypervisorConfig: hyperConfig,

@@ -16,6 +16,7 @@ import (
 	"github.com/kata-containers/runtime/virtcontainers/types"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/stretchr/testify/assert"
+	"github.com/kata-containers/runtime/virtcontainers/hypervisor"
 )
 
 type mockCgroup struct {

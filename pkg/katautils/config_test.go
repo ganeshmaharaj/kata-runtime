@@ -21,7 +21,9 @@ import (
 
 	ktu "github.com/kata-containers/runtime/pkg/katatestutils"
 	vc "github.com/kata-containers/runtime/virtcontainers"
+	vcHypervisor "github.com/kata-containers/runtime/virtcontainers/hypervisor"
 	"github.com/kata-containers/runtime/virtcontainers/pkg/oci"
+	"github.com/kata-containers/runtime/virtcontainers/types"
 	"github.com/kata-containers/runtime/virtcontainers/utils"
 	"github.com/stretchr/testify/assert"
 )
@@ -47,7 +49,6 @@ type testRuntimeConfig struct {
 }
 
 func createConfig(configPath string, fileData string) error {
-
 	err := ioutil.WriteFile(configPath, []byte(fileData), testFileMode)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to create config file %s %v\n", configPath, err)
@@ -143,11 +144,11 @@ func createAllRuntimeConfigFiles(dir, hypervisor string) (config testRuntimeConf
 		}
 	}
 
-	hypervisorConfig := vc.HypervisorConfig{
+	hypervisorConfig := vcHypervisor.Config{
 		HypervisorPath:        hypervisorPath,
 		KernelPath:            kernelPath,
 		ImagePath:             imagePath,
-		KernelParams:          vc.DeserializeParams(strings.Fields(kernelParams)),
+		KernelParams:          vcHypervisor.DeserializeParams(strings.Fields(kernelParams)),
 		HypervisorMachineType: machineType,
 		NumVCPUs:              defaultVCPUCount,
 		DefaultMaxVCPUs:       uint32(goruntime.NumCPU()),
@@ -608,7 +609,7 @@ func TestMinimalRuntimeConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedHypervisorConfig := vc.HypervisorConfig{
+	expectedHypervisorConfig := vcHypervisor.Config{
 		HypervisorPath:        defaultHypervisorPath,
 		JailerPath:            defaultJailerPath,
 		KernelPath:            defaultKernelPath,
@@ -950,7 +951,7 @@ func TestHypervisorDefaults(t *testing.T) {
 	h.DefaultMaxVCPUs = uint32(numCPUs) + 1
 	assert.Equal(h.defaultMaxVCPUs(), uint32(numCPUs), "default max vCPU number is wrong")
 
-	maxvcpus := vc.MaxQemuVCPUs()
+	maxvcpus := vcHypervisor.MaxQemuVCPUs()
 	h.DefaultMaxVCPUs = maxvcpus + 1
 	assert.Equal(h.defaultMaxVCPUs(), uint32(numCPUs), "default max vCPU number is wrong")
 
@@ -1468,8 +1469,8 @@ func TestUpdateRuntimeConfigurationInvalidKernelParams(t *testing.T) {
 		GetKernelParamsFunc = savedFunc
 	}()
 
-	GetKernelParamsFunc = func(needSystemd, trace bool) []vc.Param {
-		return []vc.Param{
+	GetKernelParamsFunc = func(needSystemd, trace bool) []vcHypervisor.Param {
+		return []vcHypervisor.Param{
 			{
 				Key:   "",
 				Value: "",
@@ -1560,7 +1561,7 @@ func TestCheckHypervisorConfig(t *testing.T) {
 		// capture output to buffer
 		kataUtilsLogger.Logger.Out = logBuf
 
-		config := vc.HypervisorConfig{
+		config := vcHypervisor.Config{
 			ImagePath:  d.imagePath,
 			InitrdPath: d.initrdPath,
 			MemorySize: d.memBytes,
@@ -1599,7 +1600,7 @@ func TestCheckNetNsConfig(t *testing.T) {
 
 	config = oci.RuntimeConfig{
 		DisableNewNetNs:   true,
-		InterNetworkModel: vc.NetXConnectDefaultModel,
+		InterNetworkModel: types.NetXConnectDefaultModel,
 	}
 	err = checkNetNsConfig(config)
 	assert.Error(err)
@@ -1626,7 +1627,7 @@ func TestCheckFactoryConfig(t *testing.T) {
 
 	for i, d := range data {
 		config := oci.RuntimeConfig{
-			HypervisorConfig: vc.HypervisorConfig{
+			HypervisorConfig: vcHypervisor.Config{
 				ImagePath:  d.imagePath,
 				InitrdPath: d.initrdPath,
 			},
@@ -1650,19 +1651,19 @@ func TestCheckNetNsConfigShimTrace(t *testing.T) {
 	assert := assert.New(t)
 
 	type testData struct {
-		networkModel vc.NetInterworkingModel
 		disableNetNs bool
+		networkModel types.NetInterworkingModel
 		shimTrace    bool
 		expectError  bool
 	}
 
 	data := []testData{
-		{vc.NetXConnectMacVtapModel, false, false, false},
-		{vc.NetXConnectMacVtapModel, false, true, true},
-		{vc.NetXConnectMacVtapModel, true, true, true},
-		{vc.NetXConnectMacVtapModel, true, false, true},
-		{vc.NetXConnectNoneModel, true, false, false},
-		{vc.NetXConnectNoneModel, true, true, false},
+		{types.NetXConnectMacVtapModel, false, false, false},
+		{types.NetXConnectMacVtapModel, false, true, true},
+		{types.NetXConnectMacVtapModel, true, true, true},
+		{types.NetXConnectMacVtapModel, true, false, true},
+		{types.NetXConnectNoneModel, true, false, false},
+		{types.NetXConnectNoneModel, true, true, false},
 	}
 
 	for i, d := range data {

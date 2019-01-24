@@ -12,8 +12,8 @@ import (
 	"syscall"
 	"unsafe"
 
-	vc "github.com/kata-containers/runtime/virtcontainers"
 	"github.com/sirupsen/logrus"
+	"github.com/kata-containers/runtime/virtcontainers/hypervisor"
 )
 
 const (
@@ -91,7 +91,7 @@ func setCPUtype(hypervisorType vc.HypervisorType) error {
 		return fmt.Errorf("Unknow CPU Type")
 	} else if cpuType == cpuTypeIntel {
 		var kvmIntelParams map[string]string
-		onVMM, err := vc.RunningOnVMM(procCPUInfo)
+		onVMM, err := hypervisor.RunningOnVMM(procCPUInfo)
 		if err != nil && !onVMM {
 			kvmIntelParams = map[string]string{
 				// "VMX Unrestricted mode support". This is used

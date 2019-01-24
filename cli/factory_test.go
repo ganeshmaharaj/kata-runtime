@@ -16,6 +16,7 @@ import (
 
 	ktu "github.com/kata-containers/runtime/pkg/katatestutils"
 	vc "github.com/kata-containers/runtime/virtcontainers"
+	"github.com/kata-containers/runtime/virtcontainers/hypervisor"
 )
 
 const testDisabledAsNonRoot = "Test disabled as requires root privileges"
@@ -72,7 +73,7 @@ func TestFactoryCLIFunctionInit(t *testing.T) {
 
 	runtimeConfig.FactoryConfig.Template = true
 	runtimeConfig.FactoryConfig.TemplatePath = "/run/vc/vm/template"
-	runtimeConfig.HypervisorType = vc.MockHypervisor
+	runtimeConfig.HypervisorType = hypervisor.Mock
 	runtimeConfig.AgentType = vc.NoopAgentType
 	runtimeConfig.ProxyType = vc.NoopProxyType
 	ctx.App.Metadata["runtimeConfig"] = runtimeConfig
@@ -108,7 +109,7 @@ func TestFactoryCLIFunctionDestroy(t *testing.T) {
 
 	// With template
 	runtimeConfig.FactoryConfig.Template = true
-	runtimeConfig.HypervisorType = vc.MockHypervisor
+	runtimeConfig.HypervisorType = hypervisor.Mock
 	runtimeConfig.AgentType = vc.NoopAgentType
 	ctx.App.Metadata["runtimeConfig"] = runtimeConfig
 	fn, ok = destroyFactoryCommand.Action.(func(context *cli.Context) error)
@@ -144,7 +145,7 @@ func TestFactoryCLIFunctionStatus(t *testing.T) {
 
 	// With template
 	runtimeConfig.FactoryConfig.Template = true
-	runtimeConfig.HypervisorType = vc.MockHypervisor
+	runtimeConfig.HypervisorType = hypervisor.Mock
 	runtimeConfig.AgentType = vc.NoopAgentType
 	ctx.App.Metadata["runtimeConfig"] = runtimeConfig
 	err = fn(ctx)

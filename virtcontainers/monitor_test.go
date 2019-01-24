@@ -9,6 +9,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/kata-containers/runtime/virtcontainers/hypervisor"
+	"github.com/kata-containers/runtime/virtcontainers/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,7 +21,7 @@ func TestMonitorSuccess(t *testing.T) {
 	assert := assert.New(t)
 
 	// create a sandbox
-	s, err := testCreateSandbox(t, testSandboxID, MockHypervisor, hConfig, NoopAgentType, NetworkConfig{}, []ContainerConfig{contConfig}, nil)
+	s, err := testCreateSandbox(t, testSandboxID, hypervisor.Mock, hConfig, NoopAgentType, types.NetworkConfig{}, []ContainerConfig{contConfig}, nil)
 	assert.NoError(err)
 	defer cleanUp()
 
@@ -43,7 +45,7 @@ func TestMonitorClosedChannel(t *testing.T) {
 	assert := assert.New(t)
 
 	// create a sandbox
-	s, err := testCreateSandbox(t, testSandboxID, MockHypervisor, hConfig, NoopAgentType, NetworkConfig{}, []ContainerConfig{contConfig}, nil)
+	s, err := testCreateSandbox(t, testSandboxID, hypervisor.Mock, hConfig, NoopAgentType, types.NetworkConfig{}, []ContainerConfig{contConfig}, nil)
 	assert.NoError(err)
 	defer cleanUp()
 

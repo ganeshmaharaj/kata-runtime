@@ -25,6 +25,7 @@ import (
 	"github.com/kata-containers/agent/protocols/grpc"
 	"github.com/kata-containers/runtime/virtcontainers/device/config"
 	persistapi "github.com/kata-containers/runtime/virtcontainers/persist/api"
+	"github.com/kata-containers/runtime/virtcontainers/hypervisor"
 	vcAnnotations "github.com/kata-containers/runtime/virtcontainers/pkg/annotations"
 	ns "github.com/kata-containers/runtime/virtcontainers/pkg/nsenter"
 	vcTypes "github.com/kata-containers/runtime/virtcontainers/pkg/types"
@@ -67,7 +68,6 @@ var (
 	type9pFs              = "9p"
 	typeVirtioFS          = "virtio_fs"
 	typeVirtioFSNoCache   = "none"
-	vsockSocketScheme     = "vsock"
 	// port numbers below 1024 are called privileged ports. Only a process with
 	// CAP_NET_BIND_SERVICE capability may bind to these port numbers.
 	vSockPort                   = 1024
@@ -107,16 +107,6 @@ type KataAgentConfig struct {
 	Trace        bool
 	TraceMode    string
 	TraceType    string
-}
-
-type kataVSOCK struct {
-	contextID uint64
-	port      uint32
-	vhostFd   *os.File
-}
-
-func (s *kataVSOCK) String() string {
-	return fmt.Sprintf("%s://%d:%d", vsockSocketScheme, s.contextID, s.port)
 }
 
 // KataAgentState is the structure describing the data stored from this
@@ -176,7 +166,7 @@ func (k *kataAgent) generateVMSocket(id string, c KataAgentConfig) error {
 		// We want to go through VSOCK. The VM VSOCK endpoint will be our gRPC.
 		k.Logger().Debug("agent: Using vsock VM socket endpoint")
 		// We dont know yet the context ID - set empty vsock configuration
-		k.vmSocket = kataVSOCK{}
+		k.vmSocket = types.VSOCK{}
 	} else {
 		k.Logger().Debug("agent: Using unix socket form VM socket endpoint")
 		// We need to generate a host UNIX socket path for the emulated serial port.
@@ -302,7 +292,7 @@ func (k *kataAgent) agentURL() (string, error) {
 	switch s := k.vmSocket.(type) {
 	case types.Socket:
 		return s.HostPath, nil
-	case kataVSOCK:
+	case types.VSOCK:
 		return s.String(), nil
 	default:
 		return "", fmt.Errorf("Invalid socket type")
@@ -318,7 +308,7 @@ func (k *kataAgent) capabilities() types.Capabilities {
 	return caps
 }
 
-func (k *kataAgent) internalConfigure(h hypervisor, id, sharePath string, builtin bool, config interface{}) error {
+func (k *kataAgent) internalConfigure(h hypervisor.Hypervisor, id, sharePath string, builtin bool, config interface{}) error {
 	if config != nil {
 		switch c := config.(type) {
 		case KataAgentConfig:
@@ -338,7 +328,7 @@ func (k *kataAgent) internalConfigure(h hypervisor, id, sharePath string, builti
 	return nil
 }
 
-func (k *kataAgent) configure(h hypervisor, id, sharePath string, builtin bool, config interface{}) error {
+func (k *kataAgent) configure(h hypervisor.Hypervisor, id, sharePath string, builtin bool, config interface{}) error {
 	err := k.internalConfigure(h, id, sharePath, builtin, config)
 	if err != nil {
 		return err
@@ -346,17 +336,17 @@ func (k *kataAgent) configure(h hypervisor, id, sharePath string, builtin bool, 
 
 	switch s := k.vmSocket.(type) {
 	case types.Socket:
-		err = h.addDevice(s, serialPortDev)
+		err = h.AddDevice(s, hypervisor.SerialPortDev)
 		if err != nil {
 			return err
 		}
-	case kataVSOCK:
-		s.vhostFd, s.contextID, err = utils.FindContextID()
+	case types.VSOCK:
+		s.VhostFd, s.ContextID, err = utils.FindContextID()
 		if err != nil {
 			return err
 		}
-		s.port = uint32(vSockPort)
-		if err = h.addDevice(s, vSockPCIDev); err != nil {
+		s.Port = uint32(vSockPort)
+		if err = h.AddDevice(s, hypervisor.vSockPCIDev); err != nil {
 			return err
 		}
 		k.vmSocket = s
@@ -366,7 +356,7 @@ func (k *kataAgent) configure(h hypervisor, id, sharePath string, builtin bool, 
 
 	// Neither create shared directory nor add 9p device if hypervisor
 	// doesn't support filesystem sharing.
-	caps := h.capabilities()
+	caps := h.Capabilities()
 	if !caps.IsFsSharingSupported() {
 		return nil
 	}
@@ -382,7 +372,7 @@ func (k *kataAgent) configure(h hypervisor, id, sharePath string, builtin bool, 
 		return err
 	}
 
-	return h.addDevice(sharedVolume, fsDev)
+	return h.AddDevice(sharedVolume, hypervisor.FsDev)
 }
 
 func (k *kataAgent) configureFromGrpc(id string, builtin bool, config interface{}) error {
@@ -614,7 +604,7 @@ func (k *kataAgent) startProxy(sandbox *Sandbox) error {
 		return err
 	}
 
-	consoleURL, err := sandbox.hypervisor.getSandboxConsole(sandbox.id)
+	consoleURL, err := sandbox.hypervisor.GetSandboxConsole(sandbox.id)
 	if err != nil {
 		return err
 	}
@@ -734,7 +724,7 @@ func (k *kataAgent) startSandbox(sandbox *Sandbox) error {
 	//
 	// Setup network interfaces and routes
 	//
-	interfaces, routes, err := generateInterfacesAndRoutes(sandbox.networkNS)
+	interfaces, routes, err := sandbox.networkNS.interfacesAndRoutes(sandbox.networkNS)
 	if err != nil {
 		return err
 	}
@@ -746,7 +736,7 @@ func (k *kataAgent) startSandbox(sandbox *Sandbox) error {
 	}
 
 	storages := []*grpc.Storage{}
-	caps := sandbox.hypervisor.capabilities()
+	caps := sandbox.hypervisor.Capabilities()
 
 	// append 9p shared volume to storages only if filesystem sharing is supported
 	if caps.IsFsSharingSupported() {

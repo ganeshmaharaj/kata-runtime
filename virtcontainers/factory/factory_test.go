@@ -13,6 +13,7 @@ import (
 
 	vc "github.com/kata-containers/runtime/virtcontainers"
 	"github.com/kata-containers/runtime/virtcontainers/factory/base"
+	"github.com/kata-containers/runtime/virtcontainers/hypervisor"
 	"github.com/kata-containers/runtime/virtcontainers/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -32,7 +33,7 @@ func TestNewFactory(t *testing.T) {
 	assert.Error(err)
 
 	config.VMConfig = vc.VMConfig{
-		HypervisorType: vc.MockHypervisor,
+		HypervisorType: hypervisor.Mock,
 		AgentType:      vc.NoopAgentType,
 		ProxyType:      vc.NoopProxyType,
 	}
@@ -42,7 +43,7 @@ func TestNewFactory(t *testing.T) {
 
 	testDir, _ := ioutil.TempDir("", "vmfactory-tmp-")
 
-	config.VMConfig.HypervisorConfig = vc.HypervisorConfig{
+	config.VMConfig.HypervisorConfig = hypervisor.Config{
 		KernelPath: testDir,
 		ImagePath:  testDir,
 	}
@@ -92,7 +93,7 @@ func TestFactorySetLogger(t *testing.T) {
 	SetLogger(context.Background(), testLog)
 
 	var config Config
-	config.VMConfig.HypervisorConfig = vc.HypervisorConfig{
+	config.VMConfig.HypervisorConfig = hypervisor.Config{
 		KernelPath: "foo",
 		ImagePath:  "bar",
 	}
@@ -112,8 +113,8 @@ func TestVMConfigValid(t *testing.T) {
 	testDir, _ := ioutil.TempDir("", "vmfactory-tmp-")
 
 	config := vc.VMConfig{
-		HypervisorType: vc.MockHypervisor,
-		HypervisorConfig: vc.HypervisorConfig{
+		HypervisorType: hypervisor.Mock,
+		HypervisorConfig: hypervisor.Config{
 			KernelPath: testDir,
 			ImagePath:  testDir,
 		},
@@ -142,11 +143,11 @@ func TestCheckVMConfig(t *testing.T) {
 	err := checkVMConfig(config1, config2)
 	assert.Nil(err)
 
-	config1.HypervisorType = vc.MockHypervisor
+	config1.HypervisorType = hypervisor.Mock
 	err = checkVMConfig(config1, config2)
 	assert.Error(err)
 
-	config2.HypervisorType = vc.MockHypervisor
+	config2.HypervisorType = hypervisor.Mock
 	err = checkVMConfig(config1, config2)
 	assert.Nil(err)
 
@@ -159,14 +160,14 @@ func TestCheckVMConfig(t *testing.T) {
 	assert.Nil(err)
 
 	testDir, _ := ioutil.TempDir("", "vmfactory-tmp-")
-	config1.HypervisorConfig = vc.HypervisorConfig{
+	config1.HypervisorConfig = hypervisor.Config{
 		KernelPath: testDir,
 		ImagePath:  testDir,
 	}
 	err = checkVMConfig(config1, config2)
 	assert.Error(err)
 
-	config2.HypervisorConfig = vc.HypervisorConfig{
+	config2.HypervisorConfig = hypervisor.Config{
 		KernelPath: testDir,
 		ImagePath:  testDir,
 	}
@@ -178,12 +179,12 @@ func TestFactoryGetVM(t *testing.T) {
 	assert := assert.New(t)
 
 	testDir, _ := ioutil.TempDir("", "vmfactory-tmp-")
-	hyperConfig := vc.HypervisorConfig{
+	hyperConfig := hypervisor.Config{
 		KernelPath: testDir,
 		ImagePath:  testDir,
 	}
 	vmConfig := vc.VMConfig{
-		HypervisorType:   vc.MockHypervisor,
+		HypervisorType:   hypervisor.Mock,
 		HypervisorConfig: hyperConfig,
 		AgentType:        vc.NoopAgentType,
 		ProxyType:        vc.NoopProxyType,
@@ -299,11 +300,11 @@ func TestDeepCompare(t *testing.T) {
 	assert.True(utils.DeepCompare(foo, bar))
 
 	// slice
-	foo.HypervisorConfig.KernelParams = []vc.Param{}
+	foo.HypervisorConfig.KernelParams = []hypervisor.Param{}
 	assert.True(utils.DeepCompare(foo, bar))
-	foo.HypervisorConfig.KernelParams = append(foo.HypervisorConfig.KernelParams, vc.Param{Key: "key", Value: "value"})
+	foo.HypervisorConfig.KernelParams = append(foo.HypervisorConfig.KernelParams, hypervisor.Param{Key: "key", Value: "value"})
 	assert.False(utils.DeepCompare(foo, bar))
-	bar.HypervisorConfig.KernelParams = append(bar.HypervisorConfig.KernelParams, vc.Param{Key: "key", Value: "value"})
+	bar.HypervisorConfig.KernelParams = append(bar.HypervisorConfig.KernelParams, hypervisor.Param{Key: "key", Value: "value"})
 	assert.True(utils.DeepCompare(foo, bar))
 
 	// map
@@ -332,12 +333,12 @@ func TestDeepCompare(t *testing.T) {
 	var err error
 	ctx := context.Background()
 	config.VMConfig = vc.VMConfig{
-		HypervisorType: vc.MockHypervisor,
+		HypervisorType: hypervisor.Mock,
 		AgentType:      vc.NoopAgentType,
 		ProxyType:      vc.NoopProxyType,
 	}
 	testDir, _ := ioutil.TempDir("", "vmfactory-tmp-")
-	config.VMConfig.HypervisorConfig = vc.HypervisorConfig{
+	config.VMConfig.HypervisorConfig = hypervisor.Config{
 		KernelPath: testDir,
 		ImagePath:  testDir,
 	}

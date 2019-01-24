@@ -12,6 +12,7 @@ import (
 
 	"github.com/kata-containers/agent/protocols/grpc"
 	persistapi "github.com/kata-containers/runtime/virtcontainers/persist/api"
+	"github.com/kata-containers/runtime/virtcontainers/hypervisor"
 	vcTypes "github.com/kata-containers/runtime/virtcontainers/pkg/types"
 	"github.com/kata-containers/runtime/virtcontainers/types"
 	"github.com/mitchellh/mapstructure"
@@ -216,7 +217,7 @@ type agent interface {
 	resumeContainer(sandbox *Sandbox, c Container) error
 
 	// configure will update agent settings based on provided arguments
-	configure(h hypervisor, id, sharePath string, builtin bool, config interface{}) error
+	configure(h hypervisor.Hypervisor, id, sharePath string, builtin bool, config interface{}) error
 
 	// configureFromGrpc will update agent settings based on provided arguments which from Grpc
 	configureFromGrpc(id string, builtin bool, config interface{}) error

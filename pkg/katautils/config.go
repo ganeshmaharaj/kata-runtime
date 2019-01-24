@@ -17,13 +17,15 @@ import (
 	vc "github.com/kata-containers/runtime/virtcontainers"
 	"github.com/kata-containers/runtime/virtcontainers/device/config"
 	exp "github.com/kata-containers/runtime/virtcontainers/experimental"
+	vcHypervisor "github.com/kata-containers/runtime/virtcontainers/hypervisor"
 	"github.com/kata-containers/runtime/virtcontainers/pkg/oci"
+	"github.com/kata-containers/runtime/virtcontainers/types"
 	"github.com/kata-containers/runtime/virtcontainers/utils"
 	"github.com/sirupsen/logrus"
 )
 
 const (
-	defaultHypervisor = vc.QemuHypervisor
+	defaultHypervisor = vcHypervisor.Qemu
 	defaultAgent      = vc.KataContainersAgent
 )
 
@@ -283,7 +285,7 @@ func (h hypervisor) defaultVCPUs() uint32 {
 
 func (h hypervisor) defaultMaxVCPUs() uint32 {
 	numcpus := uint32(goruntime.NumCPU())
-	maxvcpus := vc.MaxQemuVCPUs()
+	maxvcpus := vcHypervisor.MaxQemuVCPUs()
 	reqVCPUs := h.DefaultMaxVCPUs
 
 	//don't exceed the number of physical CPUs. If a default is not provided, use the
@@ -468,10 +470,10 @@ func (n netmon) debug() bool {
 	return n.Debug
 }
 
-func newFirecrackerHypervisorConfig(h hypervisor) (vc.HypervisorConfig, error) {
+func newFirecrackerHypervisorConfig(h hypervisor) (vcHypervisor.Config, error) {
 	hypervisor, err := h.path()
 	if err != nil {
-		return vc.HypervisorConfig{}, err
+		return vcHypervisor.Config{}, err
 	}
 
 	jailer, err := h.jailerPath()
@@ -481,38 +483,38 @@ func newFirecrackerHypervisorConfig(h hypervisor) (vc.HypervisorConfig, error) {
 
 	kernel, err := h.kernel()
 	if err != nil {
-		return vc.HypervisorConfig{}, err
+		return vcHypervisor.Config{}, err
 	}
 
 	initrd, image, err := h.getInitrdAndImage()
 	if err != nil {
-		return vc.HypervisorConfig{}, err
+		return vcHypervisor.Config{}, err
 	}
 
 	firmware, err := h.firmware()
 	if err != nil {
-		return vc.HypervisorConfig{}, err
+		return vcHypervisor.Config{}, err
 	}
 
 	kernelParams := h.kernelParams()
 
 	blockDriver, err := h.blockDeviceDriver()
 	if err != nil {
-		return vc.HypervisorConfig{}, err
+		return vcHypervisor.Config{}, err
 	}
 
 	if !utils.SupportsVsocks() {
-		return vc.HypervisorConfig{}, errors.New("No vsock support, firecracker cannot be used")
+		return vcHypervisor.Config{}, errors.New("No vsock support, firecracker cannot be used")
 	}
 
-	return vc.HypervisorConfig{
+	return vcHypervisor.Config{
 		HypervisorPath:        hypervisor,
 		JailerPath:            jailer,
 		KernelPath:            kernel,
 		InitrdPath:            initrd,
 		ImagePath:             image,
 		FirmwarePath:          firmware,
-		KernelParams:          vc.DeserializeParams(strings.Fields(kernelParams)),
+		KernelParams:          vcHypervisor.DeserializeParams(strings.Fields(kernelParams)),
 		NumVCPUs:              h.defaultVCPUs(),
 		DefaultMaxVCPUs:       h.defaultMaxVCPUs(),
 		MemorySize:            h.defaultMemSz(),
@@ -531,35 +533,35 @@ func newFirecrackerHypervisorConfig(h hypervisor) (vc.HypervisorConfig, error) {
 	}, nil
 }
 
-func newQemuHypervisorConfig(h hypervisor) (vc.HypervisorConfig, error) {
+func newQemuHypervisorConfig(h hypervisor) (vcHypervisor.Config, error) {
 	hypervisor, err := h.path()
 	if err != nil {
-		return vc.HypervisorConfig{}, err
+		return vcHypervisor.Config{}, err
 	}
 
 	kernel, err := h.kernel()
 	if err != nil {
-		return vc.HypervisorConfig{}, err
+		return vcHypervisor.Config{}, err
 	}
 
 	initrd, image, err := h.getInitrdAndImage()
 	if err != nil {
-		return vc.HypervisorConfig{}, err
+		return vcHypervisor.Config{}, err
 	}
 
 	if image != "" && initrd != "" {
-		return vc.HypervisorConfig{},
+		return vcHypervisor.Config{},
 			errors.New("having both an image and an initrd defined in the configuration file is not supported")
 	}
 
 	if image == "" && initrd == "" {
-		return vc.HypervisorConfig{},
+		return vcHypervisor.Config{},
 			errors.New("either image or initrd must be defined in the configuration file")
 	}
 
 	firmware, err := h.firmware()
 	if err != nil {
-		return vc.HypervisorConfig{}, err
+		return vcHypervisor.Config{}, err
 	}
 
 	machineAccelerators := h.machineAccelerators()
@@ -568,7 +570,7 @@ func newQemuHypervisorConfig(h hypervisor) (vc.HypervisorConfig, error) {
 
 	blockDriver, err := h.blockDeviceDriver()
 	if err != nil {
-		return vc.HypervisorConfig{}, err
+		return vcHypervisor.Config{}, err
 	}
 
 	sharedFS, err := h.sharedFS()
@@ -591,14 +593,14 @@ func newQemuHypervisorConfig(h hypervisor) (vc.HypervisorConfig, error) {
 		}
 	}
 
-	return vc.HypervisorConfig{
+	return vcHypervisor.Config{
 		HypervisorPath:          hypervisor,
 		KernelPath:              kernel,
 		InitrdPath:              initrd,
 		ImagePath:               image,
 		FirmwarePath:            firmware,
 		MachineAccelerators:     machineAccelerators,
-		KernelParams:            vc.DeserializeParams(strings.Fields(kernelParams)),
+		KernelParams:            vcHypervisor.DeserializeParams(strings.Fields(kernelParams)),
 		HypervisorMachineType:   machineType,
 		NumVCPUs:                h.defaultVCPUs(),
 		DefaultMaxVCPUs:         h.defaultMaxVCPUs(),
@@ -723,14 +725,14 @@ func newShimConfig(s shim) (vc.ShimConfig, error) {
 func updateRuntimeConfigHypervisor(configPath string, tomlConf tomlConfig, config *oci.RuntimeConfig) error {
 	for k, hypervisor := range tomlConf.Hypervisor {
 		var err error
-		var hConfig vc.HypervisorConfig
+		var hConfig vcHypervisor.Config
 
 		switch k {
 		case firecrackerHypervisorTableType:
-			config.HypervisorType = vc.FirecrackerHypervisor
+			config.HypervisorType = vcHypervisor.Firecracker
 			hConfig, err = newFirecrackerHypervisorConfig(hypervisor)
 		case qemuHypervisorTableType:
-			config.HypervisorType = vc.QemuHypervisor
+			config.HypervisorType = vcHypervisor.Qemu
 			hConfig, err = newQemuHypervisorConfig(hypervisor)
 		case acrnHypervisorTableType:
 			config.HypervisorType = vc.AcrnHypervisor
@@ -847,7 +849,7 @@ func SetKernelParams(runtimeConfig *oci.RuntimeConfig) error {
 	defaultKernelParams := GetKernelParamsFunc(needSystemd(runtimeConfig.HypervisorConfig), runtimeConfig.Trace)
 
 	if runtimeConfig.HypervisorConfig.Debug {
-		strParams := vc.SerializeParams(defaultKernelParams, "=")
+		strParams := vcHypervisor.SerializeParams(defaultKernelParams, "=")
 		formatted := strings.Join(strParams, " ")
 
 		kataUtilsLogger.WithField("default-kernel-parameters", formatted).Debug()
@@ -857,7 +859,7 @@ func SetKernelParams(runtimeConfig *oci.RuntimeConfig) error {
 	userKernelParams := runtimeConfig.HypervisorConfig.KernelParams
 
 	// reset
-	runtimeConfig.HypervisorConfig.KernelParams = []vc.Param{}
+	runtimeConfig.HypervisorConfig.KernelParams = []vcHypervisor.Param{}
 
 	// first, add default values
 	for _, p := range defaultKernelParams {
@@ -930,7 +932,8 @@ func updateRuntimeConfig(configPath string, tomlConf tomlConfig, config *oci.Run
 }
 
 func GetDefaultHypervisorConfig() vc.HypervisorConfig {
-	return vc.HypervisorConfig{
+	return vcHypervisor.Config{
+
 		HypervisorPath:          defaultHypervisorPath,
 		JailerPath:              defaultJailerPath,
 		KernelPath:              defaultKernelPath,
@@ -1117,7 +1120,7 @@ func checkNetNsConfig(config oci.RuntimeConfig) error {
 		if config.NetmonConfig.Enable {
 			return fmt.Errorf("config disable_new_netns conflicts with enable_netmon")
 		}
-		if config.InterNetworkModel != vc.NetXConnectNoneModel {
+		if config.InterNetworkModel != types.NetXConnectNoneModel {
 			return fmt.Errorf("config disable_new_netns only works with 'none' internetworking_model")
 		}
 	} else if shim, ok := config.ShimConfig.(vc.ShimConfig); ok && shim.Trace {
@@ -1152,7 +1155,7 @@ func checkFactoryConfig(config oci.RuntimeConfig) error {
 
 // checkHypervisorConfig performs basic "sanity checks" on the hypervisor
 // config.
-func checkHypervisorConfig(config vc.HypervisorConfig) error {
+func checkHypervisorConfig(config vcHypervisor.Config) error {
 	type image struct {
 		path   string
 		initrd bool
