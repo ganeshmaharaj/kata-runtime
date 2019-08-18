@@ -68,6 +68,9 @@ const (
 	// The first word is considered as the module name and the rest as its parameters.
 	//
 	KernelModules = vcAnnotationsPrefix + "KernelModules"
+
+	// KataConfigOverride is the annotation to pass a subset of configuration overrides to kata
+	KataConfigOverride = vcAnnotationsPrefix + "KataConfigOverride"
 )
 
 const (

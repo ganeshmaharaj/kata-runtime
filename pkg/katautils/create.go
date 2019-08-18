@@ -10,8 +10,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/imdario/mergo"
 	vc "github.com/kata-containers/runtime/virtcontainers"
 	vf "github.com/kata-containers/runtime/virtcontainers/factory"
+	vcAnnotations "github.com/kata-containers/runtime/virtcontainers/pkg/annotations"
 	"github.com/kata-containers/runtime/virtcontainers/pkg/oci"
 )
 
@@ -104,6 +106,20 @@ func CreateSandbox(ctx context.Context, vci vc.VC, ociSpec oci.CompatOCISpec, ru
 	containerID, bundlePath, console string, disableOutput, systemdCgroup, builtIn bool) (_ vc.VCSandbox, _ vc.Process, err error) {
 	span, ctx := Trace(ctx, "createSandbox")
 	defer span.Finish()
+
+	// Let us try to pull the config file annotations here.
+	confOverrideToml, ok := ociSpec.Annotations[vcAnnotations.KataConfigOverride]
+	if ok {
+		// There is a config file. Time to take the overrides in
+		_, runtimeConfOverride, err := LoadConfiguration(confOverrideToml, false, true)
+		if err != nil {
+			return nil, vc.Process{}, err
+		}
+
+		if err := mergo.Merge(runtimeConfig, runtimeConfOverride); err != nil {
+			return nil, vc.Process{}, err
+		}
+	}
 
 	sandboxConfig, err := oci.SandboxConfig(ociSpec, runtimeConfig, bundlePath, containerID, console, disableOutput, systemdCgroup)
 	if err != nil {

@@ -1084,17 +1084,22 @@ func decodeConfig(configPath string) (tomlConfig, string, error) {
 	}
 
 	if err != nil {
-		return tomlConf, "", fmt.Errorf("Cannot find usable config file (%v)", err)
-	}
+		// There is a chance this is being call via annotations. Let us try to decode it.
+		_, err = toml.Decode(string(configPath), &tomlConf)
+		if err != nil {
+			return tomlConf, resolved, err
+		}
+	} else {
 
-	configData, err := ioutil.ReadFile(resolved)
-	if err != nil {
-		return tomlConf, resolved, err
-	}
+		configData, err := ioutil.ReadFile(resolved)
+		if err != nil {
+			return tomlConf, resolved, err
+		}
 
-	_, err = toml.Decode(string(configData), &tomlConf)
-	if err != nil {
-		return tomlConf, resolved, err
+		_, err = toml.Decode(string(configData), &tomlConf)
+		if err != nil {
+			return tomlConf, resolved, err
+		}
 	}
 
 	return tomlConf, resolved, nil
