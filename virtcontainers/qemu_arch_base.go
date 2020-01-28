@@ -146,13 +146,14 @@ type qemuArchBase struct {
 }
 
 const (
-	defaultCores       uint32 = 1
-	defaultThreads     uint32 = 1
-	defaultCPUModel           = "host"
-	defaultBridgeBus          = "pcie.0"
-	defaultPCBridgeBus        = "pci.0"
-	maxDevIDSize              = 31
-	defaultMsize9p            = 8192
+	defaultCores        uint32 = 1
+	defaultThreads      uint32 = 1
+	defaultMultiThreads uint32 = 2
+	defaultCPUModel            = "host"
+	defaultBridgeBus           = "pcie.0"
+	defaultPCBridgeBus         = "pci.0"
+	maxDevIDSize               = 31
+	defaultMsize9p             = 8192
 )
 
 // This is the PCI start address assigned to the first bridge that
@@ -279,9 +280,9 @@ func (q *qemuArchBase) bridges(number uint32) {
 func (q *qemuArchBase) cpuTopology(vcpus, maxvcpus uint32) govmmQemu.SMP {
 	smp := govmmQemu.SMP{
 		CPUs:    vcpus,
-		Sockets: maxvcpus,
-		Cores:   defaultCores,
-		Threads: defaultThreads,
+		Sockets: 2,
+		Cores:   (vcpus / (2 * defaultMultiThreads)),
+		Threads: defaultMultiThreads,
 		MaxCPUs: maxvcpus,
 	}
 
