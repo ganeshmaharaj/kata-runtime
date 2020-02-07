@@ -22,7 +22,7 @@ import (
 
 // DefaultShmSize is the default shm size to be used in case host
 // IPC is used.
-const DefaultShmSize = 65536 * 1024
+const DefaultShmSize = 8 * 1024 * 1024 * 1024
 
 var rootfsDir = "rootfs"
 
